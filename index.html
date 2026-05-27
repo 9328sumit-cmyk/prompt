@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PromptForge // Student AI Optimizer</title>
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --panel-dark: #1e293b;
+            --accent: #38bdf8;
+            --accent-hover: #0ea5e9;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --success: #4ade80;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background-color: var(--panel-dark);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #334155;
+        }
+
+        header h1 {
+            font-size: 1.5rem;
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        main {
+            flex: 1;
+            max-width: 800px;
+            width: 100%;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .card {
+            background-color: var(--panel-dark);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+            margin-bottom: 2rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+
+        textarea {
+            width: 100%;
+            height: 120px;
+            background-color: var(--bg-dark);
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 1rem;
+            padding-right: 3.5rem;
+            color: var(--text-main);
+            font-size: 1rem;
+            resize: vertical;
+            transition: border-color 0.2s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .mic-btn {
+            position: absolute;
+            right: 12px;
+            bottom: 15px;
+            background: #334155;
+            border: none;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        .mic-btn.recording {
+            background: #ef4444;
+            animation: pulse 1.5s infinite;
+        }
+
+        .mic-btn svg {
+            width: 22px;
+            height: 22px;
+            fill: var(--text-main);
+        }
+
+        .status-bar {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: -1rem;
+            margin-bottom: 1.5rem;
+            min-height: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: transparent;
+            display: inline-block;
+        }
+
+        .status-dot.listening {
+            background: var(--success);
+            animation: blink 1s infinite;
+        }
+
+        .action-btn {
+            width: 100%;
+            background-color: var(--accent);
+            color: var(--bg-dark);
+            border: none;
+            padding: 1rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .action-btn:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .action-btn:disabled {
+            background-color: var(--text-muted);
+            cursor: not-allowed;
+        }
+
+        .output-box {
+            background-color: var(--bg-dark);
+            border-left: 4px solid var(--success);
+            border-radius: 4px;
+            padding: 1rem;
+            margin-top: 1.5rem;
+            white-space: pre-wrap;
+            position: relative;
+            display: none;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #334155;
+            border: none;
+            color: var(--text-main);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.08); box-shadow: 0 0 12px rgba(239, 68, 68, 0.6); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>PromptForge</h1>
+    </header>
+
+    <main>
+        <div class="card">
+            <div class="input-group">
+                <label for="rawPrompt">Brain-Dump / Messy Thoughts / Keyword Soup</label>
+                <textarea id="rawPrompt" placeholder="Example: build a project web system database simple for school and use python fast... add strict details but short"></textarea>
+                <button class="mic-btn" id="micBtn" title="Speak to input (Whisper flow)">
+                    <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg>
+                </button>
+            </div>
+
+            <div class="status-bar" id="statusBar">
+                <span class="status-dot" id="statusDot"></span>
+                <span id="statusText">Microphone ready.</span>
+            </div>
+
+            <button class="action-btn" id="optimizeBtn">Optimize & Compress Prompt</button>
+
+            <div class="output-box" id="outputContainer">
+                <button class="copy-btn" id="copyBtn">Copy</button>
+                <label>AI-Optimized Core Prompt (Token-Efficient)</label>
+                <div id="outputText"></div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // --- HARDCODED CONFIGURATIONS ---
+        const GROQ_API_KEY = "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";
+        
+        const SYSTEM_PROMPT = `You are a professional prompt engineer. Your job is to take messy, chaotic, unstructured thought dumps or random words from students and transform them into a pristine, hyper-clear, structured prompt that another AI can execute perfectly. 
+Rules:
+1. Strip all conversational fluff.
+2. Use markdown formatting to optimize readability.
+3. Keep the output incredibly concise to save target AI tokens, but keep essential functional criteria.
+4. Output ONLY the optimized prompt itself. Do not include introductory notes or friendly remarks.`;
+
+        // UI Element References
+        const rawPrompt = document.getElementById('rawPrompt');
+        const micBtn = document.getElementById('micBtn');
+        const statusBar = document.getElementById('statusBar');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const optimizeBtn = document.getElementById('optimizeBtn');
+        const outputContainer = document.getElementById('outputContainer');
+        const outputText = document.getElementById('outputText');
+        const copyBtn = document.getElementById('copyBtn');
+
+        // --- Speech To Text Engine (Whisper Flow) ---
+        let recognition;
+        let isUserRecording = false;
+
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'en-US';
+
+            recognition.onstart = () => {
+                statusDot.className = "status-dot listening";
+                statusText.textContent = "Listening... Speak your mind.";
+                micBtn.classList.add('recording');
+            };
+
+            recognition.onresult = (event) => {
+                let finalTranscript = '';
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        finalTranscript += event.results[i][0].transcript;
+                    }
+                }
+                if(finalTranscript) {
+                    rawPrompt.value = (rawPrompt.value + ' ' + finalTranscript).trim().replace(/\s+/g, ' ');
+                }
+            };
+
+            recognition.onerror = (event) => {
+                if (event.error === 'no-speech') {
+                    console.log("No speech detected. Auto-restarting engine stream to stay fluid...");
+                    return; 
+                }
+                if (event.error === 'not-allowed') {
+                    statusText.textContent = "Error: Microphone permission denied.";
+                    toggleMicState(false);
+                }
+                console.error("Speech Recognition Error: ", event.error);
+            };
+
+            recognition.onend = () => {
+                if (isUserRecording) {
+                    try {
+                        recognition.start();
+                    } catch(e) {
+                        console.error("Crash prevention logic executed: ", e);
+                    }
+                } else {
+                    statusDot.className = "status-dot";
+                    statusText.textContent = "Microphone stopped.";
+                    micBtn.classList.remove('recording');
+                }
+            };
+        } else {
+            micBtn.style.display = 'none';
+            statusText.textContent = "Speech recognition un-supported on this browser device profile.";
+        }
+
+        function toggleMicState(forceState = null) {
+            isUserRecording = forceState !== null ? forceState : !isUserRecording;
+            if(isUserRecording) {
+                try {
+                    recognition.start();
+                } catch(e) {
+                    console.log("Stream actively engaging.");
+                }
+            } else {
+                isUserRecording = false;
+                recognition.stop();
+            }
+        }
+
+        micBtn.addEventListener('click', () => toggleMicState());
+
+        // --- Groq Integration Execution ---
+        optimizeBtn.addEventListener('click', async () => {
+            const promptText = rawPrompt.value.trim();
+            if (!promptText) return alert("Please dump your messy thoughts first!");
+
+            if(isUserRecording) toggleMicState(false);
+
+            optimizeBtn.disabled = true;
+            optimizeBtn.textContent = "Refining & Compressing Engine Output...";
+
+            try {
+                const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${GROQ_API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: "llama-3.1-8b-instant",
+                        messages: [
+                            { role: "system", content: SYSTEM_PROMPT },
+                            { role: "user", content: `Optimize this input thought data stream: "${promptText}"` }
+                        ],
+                        temperature: 0.3
+                    })
+                });
+
+                const data = await response.json();
+                if (data.choices && data.choices[0]) {
+                    outputText.textContent = data.choices[0].message.content.trim();
+                    outputContainer.style.display = 'block';
+                } else {
+                    throw new Error(data.error?.message || "Invalid payload feedback loop.");
+                }
+            } catch (err) {
+                alert("Execution Fault: " + err.message);
+            } finally {
+                optimizeBtn.disabled = false;
+                optimizeBtn.textContent = "Optimize & Compress Prompt";
+            }
+        });
+
+        // --- Copy Clipboard Utilities ---
+        copyBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(outputText.textContent);
+            copyBtn.textContent = "Copied!";
+            setTimeout(() => copyBtn.textContent = "Copy", 2000);
+        });
+    </script>
+</body>
+</html>
